@@ -1,2 +1,3 @@
-# Used by Streamlit Community Cloud: installs this package with the dashboard extra.
-.[app]
+# Used by Streamlit Community Cloud: installs this package (editable, so config.ROOT
+# resolves to the repo and finds sql/ and data/) with the dashboard extra.
+-e .[app]
