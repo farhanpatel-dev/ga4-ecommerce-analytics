@@ -136,3 +136,23 @@ anomaly detection, a Streamlit dashboard and a stakeholder readout.
   generator confirms desktop was untouched.
 - **Recommendation:** alert on checkout completion by device. Revenue only reached z = −4.1, while
   mobile purchase-given-payment fell 88%.
+
+## Data quality
+
+- **What Google says:** the sample has placeholder values (`<Other>`, NULL, `''`) and "somewhat
+  limited internal consistency", and it can't be compared with the GA demo account. So absolute
+  numbers are illustrative; relative findings are what you can defend.
+- **Repairs matter, and errors can hide each other:** naive revenue was only 0.3% off because
+  duplicates (+) and NULL revenue (−) cancelled. That's luck, not accuracy.
+- **The trap I'd lead with:** building channels from `traffic_source`. Email loses 79% of its
+  sessions and Display gains 32%. Every channel report built that way is first-click attribution.
+- **QA caught my own bug (good story):** a session-order check found 6.4% of users with
+  `ga_session_number` out of time order, a generator artifact. I documented it rather than quietly
+  fix it, because fixing it would have changed every number already reported. It also mirrors the
+  real export's inconsistency.
+- **A second bug the analysis surfaced:** the dry run reported 0 bytes for struct fields because it
+  matched only top-level column names. I fixed it to sum Parquet leaf columns, which is closer to how
+  BigQuery bills nested fields, and added a regression test.
+- **How it limits conclusions:** placeholders create segment blind spots; `(not set)` ids block
+  joins to refunds and CRM; cookie ids split cross-device journeys (under-crediting openers); the
+  fixed window cuts journeys at both ends.
