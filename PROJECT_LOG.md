@@ -7,6 +7,7 @@ branch is kept.
 | # | Branch | What it adds |
 |---|---|---|
 | 1 | `feat/phase-1-skeleton` | Package layout, config, CI, this log, interview notes |
+| 2 | `feat/phase-2-data-generator` | GA4-schema event generator with planted effects and injected defects |
 
 ---
 
@@ -28,3 +29,31 @@ branch is kept.
 - **No GCP.** The brief targets `bigquery-public-data.ga4_obfuscated_sample_ecommerce`, which
   can only be read through a Google Cloud project. The project instead generates a dataset with
   the same GA4 export schema and runs locally on DuckDB (see phase 2).
+
+## 2. `feat/phase-2-data-generator`
+
+**Goal:** a dataset with the exact GA4 export schema and a known ground truth.
+
+**Changes**
+- `src/ga4_analytics/generate.py`: writes `data/events/events_YYYYMMDD.parquet` (92 daily
+  files, the `_TABLE_SUFFIX` layout) with nested `event_params`, `items`, `device`, `geo`,
+  `traffic_source` and `ecommerce`. Default build: 80,000 users, 139,198 sessions, 856,418
+  events, 29 MB, about 1 minute.
+- Planted effects (`PLANTED`): mobile checkout friction, a mobile/tablet payment incident on
+  2020-12-15, better-converting returning users, opener vs closer channels, Black Friday and
+  Cyber Monday peaks.
+- Injected defects (`DEFECT_RATES`) that mimic the obfuscated export: `<Other>` and
+  `(data deleted)` placeholders, `(not set)` transaction ids, duplicated purchases, NULL
+  revenue, missing `ga_session_id` and `session_start`, dropped checkout steps.
+- `data/events/_generation.json`: summary counts, planted effects and defect rates.
+- `docs/DATA.md`: schema, generation process, ground truth and defect table.
+- `tests/test_generate.py`: daily file layout, schema, determinism, ground-truth file,
+  session-id coverage.
+- `pyproject.toml`: SPDX `license = "MIT"` (setuptools 77+) and a 120-character line limit.
+
+**Decisions**
+- Generated data stays out of git (`.gitignore`); anyone rebuilds it bit-for-bit from the seed.
+- Session source/medium lives in `event_params` and user `traffic_source` is first touch only,
+  as in real GA4, so the SQL has to rebuild session channels the way it would on the real export.
+- DuckDB 2.0 removed the `->` lambda syntax and `fetchone()` on relations; the code uses
+  `lambda x: ...` and `con.execute(...)`.
