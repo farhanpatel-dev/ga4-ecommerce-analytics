@@ -74,3 +74,26 @@ anomaly detection, a Streamlit dashboard and a stakeholder readout.
 - **Likely question: "Isn't channel conversion channel value?"** No. Display converts at 1.2% per
   session but opens journeys that convert later through Direct or Email. That's what attribution
   (phase 5) is for.
+
+## Attribution
+
+- **One-line answer to "why do they disagree?":** channels play different roles in a journey, and
+  each model encodes a different assumption about which role deserves credit. Last and first click
+  are rules about position; Markov asks how much conversion probability flows through a channel;
+  Shapley asks for a fair split of a game you have to define.
+- **Concrete example:** Display gets 3.6% under last-click and 8.7% under first-click, because it
+  opens 88% of the journeys where it is at an end. Email is the mirror image: 16.2% last-click,
+  4.1% first-click.
+- **Markov removal effect:** remove a channel by sending its visits to NULL, recompute
+  P(conversion from START) from the absorbing-chain fundamental matrix, then normalise the
+  relative drops. Effects sum to more than 100% because routes overlap.
+- **Shapley insight (strong talking point):** with v(S) = conversions of journeys using only
+  channels in S, each journey is a unanimity game, so the Shapley value reduces *exactly* to an equal
+  split over distinct channels, i.e. linear attribution. Using a rate game instead gives prospecting
+  channels negative credit. The characteristic function is the model.
+- **Uncertainty:** Poisson-bootstrap intervals are about ±1 point, while the gaps between models are
+  up to 12 points. More data won't settle it; only an experiment can.
+- **Causality caveat:** none of these models say what would happen without a channel. For budget
+  decisions, run a geo holdout or conversion-lift test.
+- **Data caveats:** cookie-level ids split cross-device journeys, and the window cuts off journeys
+  that started before November or were still open at the end of January.

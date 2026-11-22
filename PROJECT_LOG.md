@@ -10,6 +10,7 @@ branch is kept.
 | 2 | `feat/phase-2-data-generator` | GA4-schema event generator with planted effects and injected defects |
 | 3 | `feat/phase-3-sql-library` | DuckDB runner with dry run, SQL library: events, items, transactions, sessions, users, daily KPIs |
 | 4 | `feat/phase-4-funnel` | Funnel by device, channel and user type with significance tests; notebook tooling; notebooks 01-02 |
+| 5 | `feat/phase-5-attribution` | Last-click, first-click, linear, Markov (removal effect) and Shapley attribution; notebook 03 |
 
 ---
 
@@ -123,3 +124,47 @@ branch is kept.
 - Tablet (4.2k sessions) can only detect a 26% relative gap: underpowered, so no conclusion.
 - Design effect from the user-clustered bootstrap is about 1.0 here, because the generator has no
   user-level purchase propensity. The test suite shows it rising above 1.5 when users differ.
+
+## 5. `feat/phase-5-attribution`
+
+**Goal:** compare five attribution models on the same journeys and explain why they disagree.
+
+**Changes**
+- `sql/08_attribution_paths.sql`: one journey per user, made of their session channels up to and
+  including the first purchase. It also builds a distinct-path table (journeys, conversions,
+  non-conversions, revenue).
+- `src/ga4_analytics/attribution.py`:
+  - last-click, first-click and linear;
+  - a first-order Markov chain with removal effects, solved exactly from the absorbing-chain
+    fundamental matrix;
+  - exact Shapley values over channel sets, using a zeta transform for subset sums, with two
+    games: `count` (the standard one) and `rate`;
+  - a position profile showing where each channel sits in a journey;
+  - Poisson-bootstrap intervals on credit shares.
+- `notebooks/03_attribution.ipynb`: all models side by side, why they disagree, bootstrap
+  intervals, a revenue view and recommendations.
+- `tests/test_attribution.py`: heuristic rules, conservation of totals, single-touch agreement,
+  Shapley-count equal to an equal split over distinct channels, Markov closed form and removal
+  effects, symmetry, and channel roles on generated data.
+
+**Results (full data, 4,101 converting journeys, 53% multi-touch)**
+
+| Channel | Last | First | Linear | Markov | Shapley |
+|---|---|---|---|---|---|
+| Display | 3.6% | 8.7% | 6.0% | 6.3% | 6.1% |
+| Organic Social | 4.2% | 9.3% | 6.6% | 6.9% | 6.7% |
+| Email | 16.2% | 4.1% | 10.1% | 12.9% | 10.1% |
+| Direct | 27.4% | 17.9% | 23.3% | 22.8% | 22.9% |
+
+- When Display or Organic Social is the first or last touch, it is the first touch 84-88% of the
+  time. Email is the last touch 88% of the time. This recovers the planted opener and closer roles.
+- Bootstrap intervals on Markov shares are about ±1 percentage point, so the gaps between models
+  come from assumptions, not noise.
+
+**Decisions**
+- **Shapley needs a stated game.** With the count game, the Shapley value is exactly an equal split
+  over a journey's distinct channels, so it matches linear. The rate game uses non-converting
+  journeys but gives Display and Social negative credit, because it rewards raising conversion
+  *rate* rather than driving conversions. Both are shown; neither is the recommended default.
+- **Markov is the recommended default**: it uses non-converting journeys and stays stable under
+  resampling. All of these models split observed conversions; none of them are causal.
