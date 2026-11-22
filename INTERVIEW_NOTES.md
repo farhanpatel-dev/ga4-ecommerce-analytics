@@ -97,3 +97,20 @@ anomaly detection, a Streamlit dashboard and a stakeholder readout.
   decisions, run a geo holdout or conversion-lift test.
 - **Data caveats:** cookie-level ids split cross-device journeys, and the window cuts off journeys
   that started before November or were still open at the end of January.
+
+## Metric tree
+
+- **Tree:** revenue = users × (sessions/user × transactions/session) × (items/transaction ×
+  revenue/item). Conversion is defined as transactions per *user*, so the identity holds exactly.
+- **Why LMDI:** the logarithmic mean Divisia index gives an exact, order-independent split with no
+  residual, and children add up to their parent. "Change one factor at a time" leaves an interaction
+  term and gives different answers depending on order. Be ready to write it:
+  dR = Σ L(R1, R0) · ln(x1/x0), with L(a, b) = (a − b)/(ln a − ln b).
+- **Story:** on Dec 15 revenue fell 58%, users were up 3% and AOV up 6%, and transactions per
+  session fell 62%, explaining −$2,035 of the −$1,841. That one leaf sends you to checkout, not
+  to marketing.
+- **Contrast:** Black Friday doubled revenue, and 73% of that was users. A traffic event; the
+  site did not get better at converting.
+- **Honest finding:** I expected week-over-week to be less noisy than day-over-day. It wasn't,
+  because the noise comes from about 45 orders a day, not from the weekday cycle. So the tree
+  explains moves, but you need anomaly detection to decide which moves are worth explaining.
