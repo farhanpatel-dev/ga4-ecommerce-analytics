@@ -57,16 +57,25 @@ def _fmt_bytes(n: int) -> str:
 
 @cache
 def _column_bytes(path: str, mtime: float) -> dict[str, int]:
-    """Compressed bytes per top-level column of one Parquet file (cached per file version)."""
+    """Compressed bytes per leaf column of one Parquet file (cached per file version).
+
+    Leaf paths are normalised to DuckDB's projection names: `.list.element` is dropped, so
+    `items.list.element.price` becomes `items.price`, and struct fields stay dotted (`device.category`).
+    """
     meta = pq.ParquetFile(path).metadata
     sizes: dict[str, int] = {}
     for rg in range(meta.num_row_groups):
         group = meta.row_group(rg)
         for c in range(group.num_columns):
             col = group.column(c)
-            top = col.path_in_schema.split(".")[0]
-            sizes[top] = sizes.get(top, 0) + col.total_compressed_size
+            leaf = col.path_in_schema.replace(".list.element", "")
+            sizes[leaf] = sizes.get(leaf, 0) + col.total_compressed_size
     return sizes
+
+
+def _projection_bytes(sizes: dict[str, int], projection: str) -> int:
+    """Bytes for one projected column: the leaf itself, or every leaf under a struct/list column."""
+    return sum(v for k, v in sizes.items() if k == projection or k.startswith(projection + "."))
 
 
 def _plan_nodes(node: dict):
@@ -125,11 +134,12 @@ class Warehouse:
                     files.update(self._files_passing(info.get("File Filters")))
                 elif node.get("name") in ("TABLE_SCAN", "SEQ_SCAN") and info.get("Table"):
                     result.reads_tables.append(info["Table"])
-        known = {c for c in columns if c in _column_bytes(*self._file_key(next(iter(self._files.values()))))}
+        sample = _column_bytes(*self._file_key(next(iter(self._files.values()))))
+        known = {c for c in columns if _projection_bytes(sample, c) > 0}
         result.columns = sorted(known)
         result.files = sorted(Path(self._files[s]).name for s in files)
         result.bytes_scanned = sum(
-            _column_bytes(*self._file_key(self._files[s])).get(c, 0) for s in files for c in known)
+            _projection_bytes(_column_bytes(*self._file_key(self._files[s])), c) for s in files for c in known)
         return result
 
     def _file_key(self, path: Path) -> tuple[str, float]:

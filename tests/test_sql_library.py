@@ -81,3 +81,11 @@ def test_split_sql_ignores_semicolons_in_strings_and_comments():
     assert parts[0] == "SELECT ';' AS a"
     assert parts[1].endswith("SELECT 2")
     assert len(parts) == 2
+
+
+def test_dry_run_counts_only_the_struct_fields_read(small_events):
+    w = Warehouse(":memory:", events_dir=small_events, verbose=False)
+    one_field = w.dry_run("SELECT sum(ecommerce.purchase_revenue_in_usd) FROM events WHERE _TABLE_SUFFIX = '20201215'")
+    whole = w.dry_run("SELECT ecommerce FROM events WHERE _TABLE_SUFFIX = '20201215'")
+    assert one_field.columns == ["ecommerce.purchase_revenue_in_usd"]
+    assert 0 < one_field.bytes_scanned < whole.bytes_scanned

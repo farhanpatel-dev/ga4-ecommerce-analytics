@@ -13,6 +13,7 @@ branch is kept.
 | 5 | `feat/phase-5-attribution` | Last-click, first-click, linear, Markov (removal effect) and Shapley attribution; notebook 03 |
 | 6 | `feat/phase-6-metric-tree` | Revenue metric tree with exact LMDI decomposition of day-over-day and period changes; notebook 04 |
 | 7 | `feat/phase-7-anomalies` | STL + robust z-score anomaly detection on 8 KPIs, known-event calendar, drill-down of 2020-12-15; notebook 05 |
+| 8 | `feat/phase-8-data-quality` | 15 SQL data-quality checks, naive-vs-modelled impact, obfuscation limits write-up; dry-run struct fix; notebook 06 |
 
 ---
 
@@ -236,3 +237,33 @@ branch is kept.
 - **Stiffer STL windows**, documented with the false-alarm table; the trade-off is slower reaction
   to genuine level shifts.
 - **Known-event calendar** in the detector, so holiday traffic labels itself instead of burying real incidents.
+
+## 8. `feat/phase-8-data-quality`
+
+**Goal:** document the data-quality issues caused by obfuscation and how they limit conclusions.
+
+**Changes**
+- `sql/11_data_quality.sql`: 15 checks in one statement (placeholders, NULLs, `(not set)` ids,
+  duplicates, missing session ids and `session_start`, incomplete checkout, session-number order,
+  channel disagreement).
+- `src/ga4_analytics/quality.py`: measured rate against injected rate, plus how each defect is
+  handled and what it limits.
+- `notebooks/06_data_quality.ipynb`: checks, naive vs modelled numbers, the `traffic_source` channel
+  trap, and the limits on the real export.
+- `docs/DATA_QUALITY.md`: the stakeholder-facing write-up.
+- `src/ga4_analytics/db.py`: **bug fix.** The dry run matched only top-level columns, so struct
+  fields (`ecommerce.purchase_revenue_in_usd`) counted 0 bytes. It now sums Parquet leaf columns,
+  which is also more accurate, like BigQuery billing nested fields. Regression test added; all
+  notebooks rebuilt.
+- `tests/test_quality.py`, plus a struct-field dry-run test in `tests/test_sql_library.py`.
+- `pyproject.toml`: notebook sources are exempt from the line limit (markdown tables).
+
+**Results**
+- Every injected defect is measured within sampling noise of its rate.
+- **Found by QA, not planted:** `ga_session_number` is out of time order for 6.4% of users (a
+  generator artifact: same-day sessions get random hours). Documented rather than fixed, so earlier
+  numbers stay valid; it matches the real export's limited internal consistency.
+- Without the repairs: transactions +1.9%, sessions -2.0%, and revenue -0.3% only because two
+  errors cancel.
+- Channel from `traffic_source` instead of session params: Email -79% of sessions, Direct -36%,
+  Display +32%, plus 7,091 Unassigned.
