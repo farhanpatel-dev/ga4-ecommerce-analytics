@@ -34,3 +34,22 @@ anomaly detection, a Streamlit dashboard and a stakeholder readout.
   you can't tell whether a Markov model or an anomaly detector is right; here I can check it
   against the planted truth. The trade-off is that real data has messier, unknown effects, and I
   say so in the readout.
+
+## SQL library and sessionization
+
+- **Session key** = `user_pseudo_id` + `ga_session_id`. `ga_session_id` alone is a timestamp,
+  not unique across users, which is a common mistake.
+- **Session channel from `event_params`, not `traffic_source`.** `traffic_source` is first-touch
+  user acquisition; using it for sessions makes every report first-click by accident.
+- **Repairing missing session ids:** gaps-and-islands with `last_value(... IGNORE NULLS)` looking
+  back and `first_value` looking forward, within GA4's 30-minute timeout.
+- **Purchase dedup:** `row_number()` over transaction id, falling back to session + basket value
+  when the id is `(not set)`. Revenue is repaired from item revenue when the purchase total is NULL.
+- **Open vs closed funnel:** open = the event happened; closed = the steps happened in order.
+  The gap between them is a tracking-quality signal.
+- **Performance story:** correlated `UNNEST` per key took 49 s; one `UNNEST` + conditional
+  aggregation took 3.8 s (13x). On BigQuery the same change cuts slot time, and bytes billed stay
+  the same because the same columns are read.
+- **Dry run first:** the runner reads DuckDB's plan, applies the pushed-down `_TABLE_SUFFIX` file
+  filter and sums the compressed bytes of only the projected columns, which is the same idea as
+  BigQuery's bytes processed.
