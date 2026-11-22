@@ -40,3 +40,7 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff.lint.per-file-ignores]
+# Notebook sources: bare expressions display output, and imports may sit next to the cell using them.
+"notebooks/src/*.py" = ["B018", "E402"]
