@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+build/
+dist/
+
+# Environment and credentials
+.env
+*.json.key
+
+# Generated data (rebuild with `python -m ga4_analytics.generate`)
+data/events/
+data/*.duckdb
+data/*.duckdb.wal
+*.parquet
+
+# Streamlit
+.streamlit/secrets.toml
