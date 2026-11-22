@@ -53,3 +53,24 @@ anomaly detection, a Streamlit dashboard and a stakeholder readout.
 - **Dry run first:** the runner reads DuckDB's plan, applies the pushed-down `_TABLE_SUFFIX` file
   filter and sums the compressed bytes of only the projected columns, which is the same idea as
   BigQuery's bytes processed.
+
+## Funnel and significance testing
+
+- **Headline:** mobile converts 38% worse than desktop, and the step-by-step tests put all of it at
+  payment and purchase. Browsing and add to cart are identical. That turns "mobile is worse" into
+  "fix the mobile payment form", which is actionable.
+- **Why step tests, not just overall:** the overall test says *whether* there is a gap; testing
+  each step's conditional rate says *where*. Holm-correct across the six steps.
+- **Holm over Bonferroni:** same family-wise guarantee, uniformly more power.
+- **Effect sizes:** with 139k sessions almost everything is significant, so I report relative lift
+  and Cohen's h, and the MDE for the small segments.
+- **Sessions are not independent:** a user-clustered bootstrap (Poisson weights, which handle
+  users in both groups, e.g. new and returning). Here the design effect is about 1 because the
+  generator has no user-level propensity. I say that openly; on real data I would expect more than
+  1 and would trust the bootstrap over the z-test.
+- **Open vs closed funnel:** 344 purchases are in the open funnel but not the closed one, because
+  checkout events went missing in sessions that still bought. That's a tracking issue to raise
+  with engineering, not a user behaviour.
+- **Likely question: "Isn't channel conversion channel value?"** No. Display converts at 1.2% per
+  session but opens journeys that convert later through Direct or Email. That's what attribution
+  (phase 5) is for.

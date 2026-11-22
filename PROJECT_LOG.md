@@ -9,6 +9,7 @@ branch is kept.
 | 1 | `feat/phase-1-skeleton` | Package layout, config, CI, this log, interview notes |
 | 2 | `feat/phase-2-data-generator` | GA4-schema event generator with planted effects and injected defects |
 | 3 | `feat/phase-3-sql-library` | DuckDB runner with dry run, SQL library: events, items, transactions, sessions, users, daily KPIs |
+| 4 | `feat/phase-4-funnel` | Funnel by device, channel and user type with significance tests; notebook tooling; notebooks 01-02 |
 
 ---
 
@@ -92,3 +93,33 @@ branch is kept.
 
 **Full-build numbers:** 856,418 events, 195,563 event-items, 4,218 transactions (after dedup),
 139,187 sessions, 80,000 users, 92 days.
+
+## 4. `feat/phase-4-funnel`
+
+**Goal:** the six-step funnel by device, channel and new vs returning, with significance tests.
+
+**Changes**
+- `sql/07_funnel.sql`: open and closed step counts for every segment in one pass with `GROUPING SETS`.
+- `src/ga4_analytics/funnel.py`: Wilson intervals, a pooled two-proportion z-test with a Newcombe
+  interval, a chi-square omnibus, Holm correction, Cohen's h, step-by-step tests that locate where
+  a segment loses conversion, a user-clustered Poisson bootstrap and a minimum-detectable-effect
+  calculator.
+- `scripts/build_notebooks.py`: builds `notebooks/src/*.py` (percent format, reviewable in diffs)
+  into executed `notebooks/*.ipynb`, so outputs and figures render on GitHub.
+- `notebooks/01_data_and_sessions.ipynb`: dry-run demo, the raw nested record, modelled tables, daily traffic.
+- `notebooks/02_funnel.ipynb`: funnel, device / channel / user-type tests, mobile step
+  diagnosis, bootstrap, MDE.
+- `src/ga4_analytics/plots.py`: one colour-blind-safe style; figures saved to `docs/figures/`.
+- `tests/test_funnel.py`: Wilson and z-test cross-checked against statsmodels, chi-square, a
+  bootstrap design effect on clustered data, MDE, and the funnel on generated data.
+
+**Results (full data)**
+- Mobile converts 37.7% worse than desktop (closed funnel, Holm p < 1e-10). Step tests put the
+  whole gap at `add_payment_info` (-13.8%) and `purchase` (-28.5%), with nothing significant at
+  the four earlier steps. Planted: -15% and -28%. **Recovered.**
+- Channel gaps sit at product views and add to cart (Email +, Display and Social -), not checkout.
+- Returning sessions are ahead at the first three steps (add to cart +38%); checkout completion
+  is equal.
+- Tablet (4.2k sessions) can only detect a 26% relative gap: underpowered, so no conclusion.
+- Design effect from the user-clustered bootstrap is about 1.0 here, because the generator has no
+  user-level purchase propensity. The test suite shows it rising above 1.5 when users differ.
