@@ -12,6 +12,7 @@ branch is kept.
 | 4 | `feat/phase-4-funnel` | Funnel by device, channel and user type with significance tests; notebook tooling; notebooks 01-02 |
 | 5 | `feat/phase-5-attribution` | Last-click, first-click, linear, Markov (removal effect) and Shapley attribution; notebook 03 |
 | 6 | `feat/phase-6-metric-tree` | Revenue metric tree with exact LMDI decomposition of day-over-day and period changes; notebook 04 |
+| 7 | `feat/phase-7-anomalies` | STL + robust z-score anomaly detection on 8 KPIs, known-event calendar, drill-down of 2020-12-15; notebook 05 |
 
 ---
 
@@ -201,3 +202,37 @@ branch is kept.
   child. Substitution leaves an interaction residual and depends on factor order.
 - Users split into new and returning in proportion to each part's change, because users is a sum,
   not a product.
+
+## 7. `feat/phase-7-anomalies`
+
+**Goal:** daily anomaly detection on key KPIs, and an investigation of the biggest anomaly.
+
+**Changes**
+- `src/ga4_analytics/anomaly.py`: robust STL (weekly period) plus a modified z-score on the
+  remainder, flagging |z| > 3.5. It runs on 8 KPIs: users, sessions, revenue, transactions,
+  conversion, cart rate, checkout completion and AOV. Counts are modelled on the log scale.
+  Includes a known-event calendar, alarm-day grouping, segment shortfall (expected at baseline rate)
+  and step-by-step comparison for one day.
+- `sql/10_anomaly_drilldown.sql`: anomaly day vs ±14-day baseline funnel counts by device, channel,
+  user type and OS in one `GROUPING SETS` pass.
+- `notebooks/05_anomalies.ipynb`: tuning, alarm days, charts, and a step-by-step investigation of
+  2020-12-15 with recommendations.
+- `tests/test_anomaly.py`: robust-z masking resistance and zero MAD, no flags from pure weekly
+  seasonality, an injected drop flagged, calendar labels, and the drill-down recovering the incident.
+
+**Results (full data)**
+- STL defaults raise 39 alarms on non-event days, because a flexible fit plus robust weights shrinks
+  the MAD. Seasonal 31 / trend 43 windows raise 5, four of which are 2020-12-15.
+- 9 alarm days: 7 are calendar events (Black Friday, Cyber Monday, Christmas, the first day) and fire
+  on traffic. **2020-12-15** is the biggest unexplained one: conversion z = -4.5, revenue,
+  transactions and checkout completion all flagged, and traffic normal.
+- Drill-down: mobile made 2 purchases from 835 sessions against 19 expected. Purchase given payment
+  fell from 50% to 6% (p < 0.001), with every earlier step normal. Tablet made 0 against 2 expected.
+  iOS and Android both collapsed. Desktop dipped diffusely (p = 0.02, no step significant), which
+  reads as noise. **Matches the planted incident** (mobile/tablet, ×0.08 at purchase).
+- 2021-01-27: a single revenue flag (z = 3.9) near the end of the series. Watch, don't act.
+
+**Decisions**
+- **Stiffer STL windows**, documented with the false-alarm table; the trade-off is slower reaction
+  to genuine level shifts.
+- **Known-event calendar** in the detector, so holiday traffic labels itself instead of burying real incidents.
