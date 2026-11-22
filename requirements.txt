@@ -1,0 +1,2 @@
+# Used by Streamlit Community Cloud: installs this package with the dashboard extra.
+.[app]
