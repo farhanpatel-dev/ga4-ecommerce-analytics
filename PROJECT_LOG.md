@@ -11,6 +11,7 @@ branch is kept.
 | 3 | `feat/phase-3-sql-library` | DuckDB runner with dry run, SQL library: events, items, transactions, sessions, users, daily KPIs |
 | 4 | `feat/phase-4-funnel` | Funnel by device, channel and user type with significance tests; notebook tooling; notebooks 01-02 |
 | 5 | `feat/phase-5-attribution` | Last-click, first-click, linear, Markov (removal effect) and Shapley attribution; notebook 03 |
+| 6 | `feat/phase-6-metric-tree` | Revenue metric tree with exact LMDI decomposition of day-over-day and period changes; notebook 04 |
 
 ---
 
@@ -168,3 +169,35 @@ branch is kept.
   *rate* rather than driving conversions. Both are shown; neither is the recommended default.
 - **Markov is the recommended default**: it uses non-converting journeys and stays stable under
   resampling. All of these models split observed conversions; none of them are causal.
+
+## 6. `feat/phase-6-metric-tree`
+
+**Goal:** revenue = users × conversion × AOV, with each day's change split across the tree.
+
+**Changes**
+- `sql/09_metric_tree.sql`: daily users (new and returning), sessions, transactions, items sold and revenue.
+- `src/ga4_analytics/metric_tree.py`: tree nodes (sessions/user, transactions/session,
+  items/transaction, revenue/item), exact LMDI decomposition with additive and multiplicative
+  levels, day-over-day and any-lag decomposition, period totals, and a per-node tree table.
+- `notebooks/04_metric_tree.ipynb`: the tree over time, daily contributions by node, the Dec 15 and
+  Black Friday waterfalls, week-over-week, and December vs January.
+- `tests/test_metric_tree.py`: log mean, exactness, a single-factor change, decomposition on
+  generated data and period identities.
+
+**Results (full data)**
+- Largest residual over 91 decompositions: 2e-12 (exact).
+- **2020-12-15:** revenue -$1,841 (-58%). Transactions per session -62% contributes -$2,035;
+  users +$58 and AOV +$129. This points at checkout and matches the planted payment incident.
+- **Black Friday:** revenue +$2,254 (+110%), with users contributing +$1,635 (73%). A traffic
+  event, not a conversion change.
+- **January vs early December:** revenue -26%, almost all from users (-$10.5k); conversion and
+  AOV held.
+- Day-over-day moves are driven mostly by conversion (48% of days) and AOV (40%) noise.
+  Week-over-week is not less noisy (mean contributions are slightly larger), so single-day
+  comparisons need anomaly detection first.
+
+**Decisions**
+- **LMDI over sequential substitution:** exact, order-independent, and consistent from parent to
+  child. Substitution leaves an interaction residual and depends on factor order.
+- Users split into new and returning in proportion to each part's change, because users is a sum,
+  not a product.
