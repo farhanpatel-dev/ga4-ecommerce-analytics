@@ -156,3 +156,15 @@ anomaly detection, a Streamlit dashboard and a stakeholder readout.
 - **How it limits conclusions:** placeholders create segment blind spots; `(not set)` ids block
   joins to refunds and CRM; cookie ids split cross-device journeys (under-crediting openers); the
   fixed window cuts journeys at both ends.
+
+## Dashboard
+
+- **Design:** one tab per analysis, with the questions a stakeholder would ask: is revenue down,
+  where in the funnel, which channel deserves credit, what changed yesterday, is it an incident,
+  can I trust the data.
+- **Engineering:** one DuckDB connection cached with `st.cache_resource` and guarded by a lock (a
+  DuckDB connection isn't thread-safe), with results cached per filter. The metric tree and anomaly
+  tabs ignore the date filter because they need the full history for their baselines.
+- **Testing a dashboard:** `streamlit.testing.AppTest` runs the script headlessly in CI against a
+  small generated dataset. It caught a real bug: a division by zero when a small segment never
+  reached a funnel step.

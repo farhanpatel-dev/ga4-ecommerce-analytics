@@ -59,3 +59,8 @@ def test_funnel_on_generated_data(wh):
     assert steps.loc["purchase", "diff"] < 0
     comp = F.compare_segments(closed, "channel")
     assert {"p_holm", "significant", "cohens_h"} <= set(comp.columns)
+
+
+def test_empty_group_returns_nan_instead_of_raising():
+    t = F.two_proportion_test(0, 0, 5, 100)
+    assert np.isnan(t.diff) and np.isnan(t.p_value) and t.p2 == 0.05
