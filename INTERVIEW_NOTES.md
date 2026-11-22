@@ -114,3 +114,25 @@ anomaly detection, a Streamlit dashboard and a stakeholder readout.
 - **Honest finding:** I expected week-over-week to be less noisy than day-over-day. It wasn't,
   because the noise comes from about 45 orders a day, not from the weekday cycle. So the tree
   explains moves, but you need anomaly detection to decide which moves are worth explaining.
+
+## Anomaly detection
+
+- **Method:** STL with a weekly period in robust mode, then a modified z-score of the remainder,
+  0.6745 · (r − median) / MAD, flagging |z| > 3.5 (the Iglewicz-Hoaglin cut-off). Counts on the log
+  scale, because weekly and holiday effects are multiplicative.
+- **Why MAD, not standard deviation:** outliers inflate the standard deviation and hide themselves
+  (masking). MAD ignores them.
+- **Best story, a tuning failure I caught:** the STL defaults raised 39 alarms on ordinary days. A
+  flexible fit absorbs normal noise, robust weights leave residuals only on the extreme days, the
+  MAD shrinks and every z inflates. Stiffer windows (seasonal 31, trend 43) brought that down to 5,
+  four of them the real incident. Trade-off: slower reaction to genuine level shifts.
+- **Calendar of known events:** 7 of 9 alarm days were Black Friday, Cyber Monday or Christmas, all
+  on traffic. Label them; don't page someone.
+- **Investigation in four questions:** traffic or conversion (conversion), which device (mobile and
+  tablet), which step (purchase given payment, 50% → 6%), which channel or OS (all of them, so not
+  marketing; iOS and Android, so a shared mobile payment path).
+- **Multiple comparisons, honestly:** desktop was also below baseline at p = 0.02, but spread
+  across steps with none significant. With three devices tested, one borderline p is expected. The
+  generator confirms desktop was untouched.
+- **Recommendation:** alert on checkout completion by device. Revenue only reached z = −4.1, while
+  mobile purchase-given-payment fell 88%.
