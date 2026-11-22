@@ -4,10 +4,30 @@ Talking points for this project, filled in phase by phase.
 
 ## The 30-second pitch
 
-I built a product and marketing analytics project on a GA4-schema ecommerce event export, run
-locally on DuckDB. It covers a sessionized SQL library, a checkout funnel with significance
-tests, five attribution models, a revenue metric tree with day-over-day decomposition, KPI
-anomaly detection, a Streamlit dashboard and a stakeholder readout.
+I built an end-to-end product and marketing analytics project on a GA4-schema ecommerce export,
+run locally on DuckDB. A sessionized SQL library feeds a checkout funnel with significance tests,
+five attribution models, a revenue metric tree, anomaly detection, a Streamlit dashboard and a
+stakeholder readout. The headline: mobile converts 38% worse than desktop, and step-level tests put
+all of it at the payment form, worth up to $33k (17% of revenue) over the quarter. I also caught a
+one-day mobile payment outage that revenue reporting barely noticed. Because I generated the data
+with planted effects, I could prove each method recovers the truth.
+
+## The 2-minute walkthrough
+
+1. **Data:** GA4 export schema (nested `event_params` and `items`), 856k events. No GCP, so it's
+   generated, with planted effects and obfuscation-style defects.
+2. **SQL:** sessionize on `user_pseudo_id` + `ga_session_id`, repair missing ids, dedup purchases,
+   channel from session params. Dry run before every query, as on BigQuery.
+3. **Funnel:** mobile −38%, located at payment (−14%) and purchase (−29%) with Holm-corrected step tests.
+4. **Attribution:** Display at 3.6% last-click vs 6.3% Markov. The models disagree on assumptions,
+   not data; bootstrap noise is ±1 point.
+5. **Metric tree:** LMDI split. Dec 15 was conversion, Black Friday was traffic.
+6. **Anomalies:** STL defaults gave 39 false alarms; tuning took that to 5, four of them the real
+   outage. The drill-down found mobile checkout success at 6% vs 50%.
+7. **Data quality:** 15 checks. The `traffic_source` trap distorts Email by 79%. QA found a bug in my
+   own generator, which I documented.
+8. **Readout:** wallet payments + form audit, device-level checkout alerting, Markov reporting,
+   geo holdout before budget moves.
 
 ## Why synthetic data, and why that is a strength
 
@@ -168,3 +188,34 @@ anomaly detection, a Streamlit dashboard and a stakeholder readout.
 - **Testing a dashboard:** `streamlit.testing.AppTest` runs the script headlessly in CI against a
   small generated dataset. It caught a real bug: a division by zero when a small segment never
   reached a funnel step.
+
+## Stakeholder readout
+
+- **Structure:** four headline findings first, then one section per finding with the chart,
+  sizing and recommendations, a confidence table, and next steps with owners and metrics.
+- **Sizing the mobile fix:** mobile sessions reaching shipping × desktop rates at payment and
+  purchase = +736 orders, about $33k (17% of revenue). Presented as an upper bound; half the gap
+  is $16.5k.
+- **Power check I corrected:** I first quoted a 9% detectable effect, but that came from the mobile
+  vs desktop comparison. A 50/50 mobile A/B test over a quarter detects 12% relative change in
+  checkout success, which is still well inside the 29% gap. Checking that before handing it to a
+  product team matters.
+- **What I'd say about confidence:** high on the mobile gap, the outage and the channel roles;
+  medium on exact attribution shares (model-dependent, needs an experiment); low on tablet
+  (underpowered).
+
+## Likely questions
+
+- **"Why not just use GA4's built-in reports?"** GA4's funnel exploration doesn't do significance
+  tests, its data-driven attribution is a black box, and it gives you no anomaly drill-down. The
+  export lets me control definitions such as session channel, dedup and closed vs open funnels.
+- **"How would this change on the real BigQuery export?"** The SQL ports with the dialect table in
+  `sql/README.md`; `$param` becomes `@param` and the dry run becomes BigQuery's real one.
+  Findings would be relative only, because the export is obfuscated.
+- **"What would you do next?"** Instrument payment errors, run the mobile wallet A/B test, a geo
+  holdout for Display, and add user-level purchase propensity to the generator so the clustered
+  bootstrap matters.
+- **"What went wrong along the way?"** Correlated UNNEST was 13x too slow; the STL defaults
+  produced 39 false alarms; the dry run under-reported struct fields; a z-test crashed on empty
+  segments; a power figure was wrong. Each was found by checking outputs against expectations,
+  and each is written up in `PROJECT_LOG.md`.

@@ -15,6 +15,7 @@ branch is kept.
 | 7 | `feat/phase-7-anomalies` | STL + robust z-score anomaly detection on 8 KPIs, known-event calendar, drill-down of 2020-12-15; notebook 05 |
 | 8 | `feat/phase-8-data-quality` | 15 SQL data-quality checks, naive-vs-modelled impact, obfuscation limits write-up; dry-run struct fix; notebook 06 |
 | 9 | `feat/phase-9-dashboard` | Interactive Streamlit dashboard (6 tabs) with headless test in CI |
+| 10 | `feat/phase-10-readout` | Stakeholder readout with sized recommendations, full README, final interview notes |
 
 ---
 
@@ -298,3 +299,23 @@ branch is kept.
 **Checks**
 - Full data: all tabs render, the KPIs match the notebooks ($189,306 revenue, 4,218 transactions,
   3.03% session conversion), and `streamlit run` serves with health `ok`.
+
+## 10. `feat/phase-10-readout`
+
+**Goal:** a stakeholder readout with recommendations to improve conversion, and a README that ties
+the deliverables together.
+
+**Changes**
+- `docs/READOUT.md`: four headline findings; sections on mobile checkout, the Dec 15 outage,
+  attribution and the metric tree, each with figures, sizing and recommendations; other conversion
+  levers; a confidence table; data caveats; next steps with owners and metrics.
+- `README.md`: purpose, an upfront data note, headline findings against the planted truth,
+  quickstart, a deliverables map, methods and layout.
+- `INTERVIEW_NOTES.md`: a 30-second pitch, a 2-minute walkthrough, readout notes and likely questions.
+
+**Sizing (computed, not estimated)**
+- Mobile at desktop rates for payment and purchase: 1,179 → 1,915 orders, +736, about $33,020
+  (17.4% of $189,306). Half the gap: about $16.5k.
+- A/B power: a 50/50 mobile test over a quarter detects a 12% relative change in purchase given
+  payment (16% on overall conversion). **Correction made before merge:** the first draft quoted 9%,
+  which was the mobile-vs-desktop MDE, not a split test.
