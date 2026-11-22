@@ -319,3 +319,20 @@ the deliverables together.
 - A/B power: a 50/50 mobile test over a quarter detects a 12% relative change in purchase given
   payment (16% on overall conversion). **Correction made before merge:** the first draft quoted 9%,
   which was the mobile-vs-desktop MDE, not a split test.
+
+## 11. `chore/repo-polish`
+
+**Goal:** make the published repo self-explanatory and the dashboard deployable.
+
+**Changes**
+- `app/dashboard.py`: if `data/ga4.duckdb` is missing, the app generates the default export and
+  builds the warehouse on first run (about a minute) instead of stopping with an error. A fresh
+  clone, or Streamlit Community Cloud, can now run `streamlit run app/dashboard.py` directly.
+- `requirements.txt`: installs the package with the `app` extra, for Streamlit Community Cloud.
+- `.github/workflows/ci.yml`: adds `workflow_dispatch` so CI can be run by hand.
+- `README.md`: CI, Python and license badges, and a dashboard screenshot (`docs/figures/dashboard.png`).
+
+**Checks**
+- ruff clean, 56 tests pass.
+- Cold start: pointed `GA4_DB` at a missing file, the app built an 88 MB warehouse and rendered in
+  18 s with the README KPIs ($189,306 revenue, 4,218 transactions, 3.03% conversion).

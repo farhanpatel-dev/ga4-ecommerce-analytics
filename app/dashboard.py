@@ -1,8 +1,7 @@
 """Streamlit dashboard over the modelled GA4 tables.
 
 Run:
-    python -m ga4_analytics.generate && python -m ga4_analytics.build   # once
-    streamlit run app/dashboard.py
+    streamlit run app/dashboard.py   # builds the data on first run if data/ga4.duckdb is missing
 
 Environment overrides (used by the tests): GA4_DB (DuckDB file), GA4_EVENTS_DIR (Parquet export).
 """
@@ -24,8 +23,10 @@ from ga4_analytics import attribution as A
 from ga4_analytics import funnel as F
 from ga4_analytics import metric_tree as M
 from ga4_analytics import quality as Q
+from ga4_analytics.build import build
 from ga4_analytics.config import EVENTS_DIR
 from ga4_analytics.db import DEFAULT_DB, Warehouse
+from ga4_analytics.generate import generate
 
 st.set_page_config(page_title="GA4 Ecommerce Analytics", page_icon="📈", layout="wide")
 
@@ -41,9 +42,15 @@ STEP_LABELS = {s: s.replace("_", " ") for s in F.STEPS}
 @st.cache_resource
 def warehouse() -> tuple[Warehouse, threading.Lock]:
     if not DB_PATH.exists():
-        st.error(f"No database at {DB_PATH}. Run `python -m ga4_analytics.generate` then "
-                 "`python -m ga4_analytics.build` first.")
-        st.stop()
+        # Fresh clone or a hosted deploy (e.g. Streamlit Community Cloud): build the default
+        # dataset once, so the app starts from nothing. Same as running generate then build.
+        with st.spinner("First run: generating the GA4 export and building the warehouse "
+                        "(about a minute)..."):
+            if not any(EVENTS.glob("events_*.parquet")):
+                generate(out_dir=EVENTS)
+            DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with Warehouse(DB_PATH, events_dir=EVENTS, verbose=False) as wh:
+                build(wh)
     return Warehouse(DB_PATH, events_dir=EVENTS, verbose=False), threading.Lock()
 
 

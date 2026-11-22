@@ -1,5 +1,9 @@
 # ga4-ecommerce-analytics
 
+[![CI](https://github.com/farhanpatel-dev/ga4-ecommerce-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/farhanpatel-dev/ga4-ecommerce-analytics/actions/workflows/ci.yml)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
 Product and marketing analytics on a GA4-schema ecommerce event export, run locally on DuckDB:
 a sessionized SQL library, a checkout funnel with significance tests, five multi-touch
 attribution models, a revenue metric tree with exact day-over-day decomposition, KPI anomaly
@@ -12,6 +16,8 @@ detection, a data-quality audit, an interactive Streamlit dashboard and a stakeh
 > against ground truth. Absolute numbers are illustrative. See [docs/DATA.md](docs/DATA.md).
 
 **Start with the [stakeholder readout](docs/READOUT.md).**
+
+![Streamlit dashboard: overview tab with revenue, transactions, AOV, sessions and conversion KPIs over a daily revenue chart](docs/figures/dashboard.png)
 
 ## Headline findings
 
@@ -32,7 +38,7 @@ pip install -e ".[dev,app,notebooks]"
 python -m ga4_analytics.generate         # ~1 min: 92 daily Parquet files, 856k events
 python -m ga4_analytics.build            # ~7 s: runs sql/00-06, dry run printed before each query
 pytest -q                                # 56 tests
-streamlit run app/dashboard.py           # dashboard on http://localhost:8501
+streamlit run app/dashboard.py           # dashboard on http://localhost:8501 (builds the data itself if it's missing)
 python scripts/build_notebooks.py        # re-executes notebooks/src/*.py into notebooks/*.ipynb
 ```
 
