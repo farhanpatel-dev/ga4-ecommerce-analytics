@@ -14,6 +14,7 @@ branch is kept.
 | 6 | `feat/phase-6-metric-tree` | Revenue metric tree with exact LMDI decomposition of day-over-day and period changes; notebook 04 |
 | 7 | `feat/phase-7-anomalies` | STL + robust z-score anomaly detection on 8 KPIs, known-event calendar, drill-down of 2020-12-15; notebook 05 |
 | 8 | `feat/phase-8-data-quality` | 15 SQL data-quality checks, naive-vs-modelled impact, obfuscation limits write-up; dry-run struct fix; notebook 06 |
+| 9 | `feat/phase-9-dashboard` | Interactive Streamlit dashboard (6 tabs) with headless test in CI |
 
 ---
 
@@ -267,3 +268,33 @@ branch is kept.
   errors cancel.
 - Channel from `traffic_source` instead of session params: Email -79% of sessions, Direct -36%,
   Display +32%, plus 7,091 Unassigned.
+
+## 9. `feat/phase-9-dashboard`
+
+**Goal:** an interactive dashboard over every analysis.
+
+**Changes**
+- `app/dashboard.py`: Streamlit app with six tabs:
+  - **Overview:** KPI cards and a daily series picker.
+  - **Funnel:** step rates by device / channel / user type, the overall funnel, Holm-corrected
+    tests against a chosen reference, and a step-by-step gap chart.
+  - **Attribution:** five models side by side, conversions or revenue, plus the position profile.
+  - **Metric tree:** pick any day, compare with the previous day or the same weekday, with an LMDI
+    waterfall and tree table.
+  - **Anomalies:** KPI chart with flags (calendar events vs unexplained), alarm days, and a
+    drill-down by segment and funnel step.
+  - **Data quality:** the check table.
+  - A sidebar date range drives Overview, Funnel and Attribution, and shows the dry-run estimate for
+    the selected range.
+  - One cached DuckDB connection behind a lock, results cached per filter, and `GA4_DB` /
+    `GA4_EVENTS_DIR` overrides.
+- `tests/test_dashboard.py`: runs the app headlessly with `streamlit.testing.AppTest` on a small
+  generated build, checks every tab renders without exceptions, and changes a control.
+- `src/ga4_analytics/funnel.py`: **bug fix found by the dashboard test.** `two_proportion_test`
+  divided by zero when a small segment never reached a step; it now returns NaN for empty groups.
+  Regression test added.
+- CI installs the `app` extra and lints `app/`.
+
+**Checks**
+- Full data: all tabs render, the KPIs match the notebooks ($189,306 revenue, 4,218 transactions,
+  3.03% session conversion), and `streamlit run` serves with health `ok`.
