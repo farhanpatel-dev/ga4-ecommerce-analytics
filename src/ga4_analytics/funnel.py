@@ -80,7 +80,14 @@ class PropTest:
 
 
 def two_proportion_test(k1: int, n1: int, k2: int, n2: int, alpha: float = 0.05) -> PropTest:
-    """Pooled two-proportion z-test of p1 - p2, with a Newcombe hybrid-score interval."""
+    """Pooled two-proportion z-test of p1 - p2, with a Newcombe hybrid-score interval.
+
+    An empty group (n = 0, e.g. a small segment that never reached a step) returns NaNs instead of
+    raising, so tables over many segments still render.
+    """
+    if n1 == 0 or n2 == 0:
+        nan = float("nan")
+        return PropTest(k1 / n1 if n1 else nan, k2 / n2 if n2 else nan, nan, nan, nan, nan, nan, nan, nan)
     p1, p2 = k1 / n1, k2 / n2
     pooled = (k1 + k2) / (n1 + n2)
     se = np.sqrt(pooled * (1 - pooled) * (1 / n1 + 1 / n2))
